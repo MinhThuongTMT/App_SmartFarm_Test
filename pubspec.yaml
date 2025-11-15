@@ -31,7 +31,10 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # WebSocket
+  # MQTT Client for HiveMQ Cloud
+  mqtt_client: ^10.2.0
+
+  # WebSocket (backup)
   web_socket_channel: ^2.4.0
   
   # State Management

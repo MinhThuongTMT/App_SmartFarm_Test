@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../services/websocket_service.dart';
+import '../services/mqtt_service.dart';
 import '../models/sensor_data.dart';
 import '../models/device_state.dart';
 
@@ -22,23 +22,19 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<SensorData> _sensorHistory = [];
   final int _maxHistoryLength = 20; // Giữ 20 điểm dữ liệu
 
-  // THAY ĐỔI URL NÀY THEO NGROK URL CỦA BẠN
-  // Format: wss://your-ngrok-url.ngrok-free.app
-  final String _serverUrl = 'ws://localhost:3000';
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _connectWebSocket();
+      _connectMqtt();
     });
   }
 
-  void _connectWebSocket() {
-    final ws = context.read<WebSocketService>();
+  void _connectMqtt() {
+    final mqtt = context.read<MqttService>();
 
     // Đăng ký callbacks
-    ws.onSensorData = (data) {
+    mqtt.onSensorData = (data) {
       setState(() {
         _sensorData = SensorData.fromJson(data);
 
@@ -50,19 +46,19 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     };
 
-    ws.onDeviceState = (data) {
+    mqtt.onDeviceState = (data) {
       setState(() {
         _deviceState = DeviceState.fromJson(data);
       });
     };
 
-    ws.onModeChange = (mode) {
+    mqtt.onModeChange = (mode) {
       setState(() {
         _currentMode = mode;
       });
     };
 
-    ws.onError = (error) {
+    mqtt.onError = (error) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Lỗi: $error'),
@@ -71,13 +67,13 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     };
 
-    // Kết nối
-    ws.connect(_serverUrl);
+    // Kết nối MQTT
+    mqtt.connect();
   }
 
   @override
   Widget build(BuildContext context) {
-    final ws = context.watch<WebSocketService>();
+    final mqtt = context.watch<MqttService>();
 
     return Scaffold(
       appBar: AppBar(
@@ -91,14 +87,14 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               children: [
                 Icon(
-                  ws.isConnected ? Icons.cloud_done : Icons.cloud_off,
-                  color: ws.isConnected ? Colors.white : Colors.red[200],
+                  mqtt.isConnected ? Icons.cloud_done : Icons.cloud_off,
+                  color: mqtt.isConnected ? Colors.white : Colors.red[200],
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  ws.isConnected ? 'Online' : 'Offline',
+                  mqtt.isConnected ? 'Online' : 'Offline',
                   style: TextStyle(
-                    color: ws.isConnected ? Colors.white : Colors.red[200],
+                    color: mqtt.isConnected ? Colors.white : Colors.red[200],
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -107,52 +103,47 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: ws.isConnected ? _buildDashboard() : _buildDisconnectedState(),
+      body: mqtt.isConnected ? _buildDashboard() : _buildDisconnectedState(),
     );
   }
 
   Widget _buildDashboard() {
-    return RefreshIndicator(
-      onRefresh: () async {
-        _connectWebSocket();
-      },
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Mode Selector
-            _buildModeSelector(),
-            const SizedBox(height: 24),
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Mode Selector
+          _buildModeSelector(),
+          const SizedBox(height: 24),
 
-            // Sensor Data Cards
-            const Text(
-              '📊 Dữ Liệu Cảm Biến',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildSensorCards(),
-            const SizedBox(height: 24),
+          // Sensor Data Cards
+          const Text(
+            '📊 Dữ Liệu Cảm Biến',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          _buildSensorCards(),
+          const SizedBox(height: 24),
 
-            // Charts
-            const Text(
-              '📈 Biểu Đồ Thời Gian Thực',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildCharts(),
-            const SizedBox(height: 24),
+          // Charts
+          const Text(
+            '📈 Biểu Đồ Thời Gian Thực',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          _buildCharts(),
+          const SizedBox(height: 24),
 
-            // Device Control
-            const Text(
-              '🎛️ Điều Khiển Thiết Bị',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _buildDeviceControls(),
-          ],
-        ),
+          // Device Control
+          const Text(
+            '🎛️ Điều Khiển Thiết Bị',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          _buildDeviceControls(),
+        ],
       ),
     );
   }
@@ -200,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
               selected: {_currentMode},
               onSelectionChanged: (Set<String> selected) {
                 final mode = selected.first;
-                context.read<WebSocketService>().sendModeChange(mode);
+                context.read<MqttService>().sendModeChange(mode);
               },
             ),
             const SizedBox(height: 8),
@@ -621,7 +612,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onChanged: isEnabled
               ? (value) {
                   context
-                      .read<WebSocketService>()
+                      .read<MqttService>()
                       .sendDeviceControl(deviceId, value);
                 }
               : null,
@@ -659,7 +650,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: _connectWebSocket,
+            onPressed: _connectMqtt,
             icon: const Icon(Icons.refresh),
             label: const Text('Kết nối lại'),
             style: ElevatedButton.styleFrom(
