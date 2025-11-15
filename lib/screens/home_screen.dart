@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../services/mqtt_service.dart';
+import '../services/hivemq_service.dart';
 import '../models/sensor_data.dart';
 import '../models/device_state.dart';
 
@@ -31,7 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _connectMqtt() {
-    final mqtt = context.read<MqttService>();
+    final mqtt = context.read<HiveMQService>();
 
     // Đăng ký callbacks
     mqtt.onSensorData = (data) {
@@ -73,7 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final mqtt = context.watch<MqttService>();
+    final mqtt = context.watch<HiveMQService>();
 
     return Scaffold(
       appBar: AppBar(
@@ -191,7 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
               selected: {_currentMode},
               onSelectionChanged: (Set<String> selected) {
                 final mode = selected.first;
-                context.read<MqttService>().sendModeChange(mode);
+                context.read<HiveMQService>().sendModeChange(mode);
               },
             ),
             const SizedBox(height: 8),
@@ -612,7 +612,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onChanged: isEnabled
               ? (value) {
                   context
-                      .read<MqttService>()
+                      .read<HiveMQService>()
                       .sendDeviceControl(deviceId, value);
                 }
               : null,

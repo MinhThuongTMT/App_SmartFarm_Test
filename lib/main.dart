@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'services/mqtt_service.dart';
+import 'services/hivemq_service.dart';
 import 'screens/home_screen.dart';
 
 void main() {
@@ -13,7 +13,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => MqttService(),
+      create: (_) => HiveMQService(),
       child: MaterialApp(
         title: 'Smart Farm',
         debugShowCheckedModeBanner: false,

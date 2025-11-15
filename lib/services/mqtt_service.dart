@@ -13,8 +13,15 @@ class MqttService extends ChangeNotifier {
   Timer? _reconnectTimer;
 
   // WebSocket URL to Node.js server (MQTT Bridge)
-  static const String _serverUrl =
-      'ws://localhost:3000'; // Change this for production
+  // OPTION 1: Local testing - Replace with your computer IP (run ipconfig to get IP)
+  // static const String _serverUrl = 'ws://192.168.1.100:3000'; // Example IP
+  
+  // OPTION 2: Production - Use Ngrok URL (temporary)
+  // static const String _serverUrl = 'wss://your-ngrok-url.ngrok-free.app';
+  
+  // OPTION 3: Production - Connect directly to HiveMQ Cloud (RECOMMENDED)
+  // Requires switching to MQTT package instead of WebSocket
+  static const String _serverUrl = 'ws://localhost:3000'; // ⚠️ Only works on emulator/web
 
   // Callbacks
   Function(Map<String, dynamic>)? onSensorData;
